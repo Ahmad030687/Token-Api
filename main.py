@@ -5,16 +5,20 @@ import uuid
 app = Flask(__name__)
 
 def get_fb_token(email, password):
-    # Unique ID aur User Agent taake FB ko lage ke real phone se login ho raha hai
+    # Unique IDs generate karna taake FB ko har baar naya device lage
     device_id = str(uuid.uuid4())
     adb_id = str(uuid.uuid4())
     
+    # LATEST HEADERS TO BYPASS 5711 ERROR
     headers = {
         "Authorization": "OAuth 350685531728|62f8ce9f74b12f84c123cc23437a4a32",
-        "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 10; Mi 9T Pro Build/QKQ1.190825.002) [FBAN/MessengerLite;FBAV/305.1.0.40.120;FBPN/com.facebook.mlite;FBLC/en_US;FBBV/3051040120;]",
+        "User-Agent": "Mozilla/5.0 (Linux; Android 12; Pixel 6 Build/SD1A.210817.036; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/121.0.6167.178 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/445.0.0.34.118;]",
         "Content-Type": "application/x-www-form-urlencoded",
         "X-FB-Connection-Type": "WIFI",
-        "X-FB-HTTP-Engine": "Liger"
+        "X-FB-HTTP-Engine": "Liger",
+        "X-FB-Client-IP": "True",
+        "X-FB-Server-Cluster": "True",
+        "X-FB-Friendly-Name": "authenticate"
     }
     
     data = {
@@ -25,7 +29,10 @@ def get_fb_token(email, password):
         "format": "json",
         "device_id": device_id,
         "adr_id": adb_id,
-        "method": "auth.login"
+        "method": "auth.login",
+        "error_detail_type": "button_with_disabled",
+        "fb_api_req_friendly_name": "authenticate",
+        "fb_api_caller_class": "com.facebook.account.login.protocol.Fb4aAuthHandler"
     }
 
     try:
@@ -39,7 +46,8 @@ def get_fb_token(email, password):
 def home():
     return jsonify({
         "status": "Online",
-        "message": "Welcome to AHMAD RDX Token API",
+        "creator": "AHMAD RDX",
+        "message": "RDX Token API is Live",
         "usage": "/token?u=EMAIL&p=PASSWORD"
     })
 
@@ -49,11 +57,14 @@ def token_api():
     pw = request.args.get('p')
     
     if not user or not pw:
-        return jsonify({"status": "error", "message": "Email and Password are required!"}), 400
+        return jsonify({
+            "status": "error", 
+            "message": "Email aur Password dono dena lazmi hain ustad!"
+        }), 400
     
     result = get_fb_token(user, pw)
     
-    # Agar token mil jaye
+    # Success check
     if "access_token" in result:
         return jsonify({
             "status": "success",
@@ -64,12 +75,15 @@ def token_api():
             }
         })
     else:
+        # Error response formatting
+        error_msg = result.get("error_msg", "Unknown error")
         return jsonify({
             "status": "failed",
-            "message": result.get("error_msg", "Unknown error occurred"),
+            "message": error_msg,
             "full_response": result
         })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-
+    # Koyeb ya Render ke liye port 8000 behtar hai
+    app.run(host='0.0.0.0', port=8000)
+    
